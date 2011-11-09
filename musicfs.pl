@@ -166,6 +166,24 @@ sub my_read {
     my ( $filename, $reqsize, $offset ) = @_;
     my $return;
     
+    my $current = $filesystem->{'root'}->{'content'};
+    my @pathElements = split( '/', $filename );
+    my $currentType = 'dir';
+
+    if ( @pathElements > 1 ) {
+        foreach my $pathElement ( @pathElements[1..$#pathElements] ) {
+
+            if ( !defined( $current->{$pathElement} ) ) {
+                &print_debug("==READING==>$filename not found!\n");
+                return -1*ENOENT;
+            }
+            $currentType = $current->{$pathElement}->{'type'};
+            $lastAttredFile = $current->{$pathElement} if ( $currentType eq 'file' );
+
+            $current = $current->{$pathElement}->{'content'} if ( $currentType eq 'dir' );
+        }
+    }
+    
     if($filename eq "/fsinfo")
     {
         $return = $lastAttredFile->{'content'};
@@ -289,32 +307,31 @@ foreach my $file (@basedir_content_mp3)
             $album = $filetag->{ID3v2}->album if defined $filetag->{ID3v2}->album;
             $track = $filetag->{ID3v2}->track if defined $filetag->{ID3v2}->track;
             
-            print_debug(" ID3v2 APIC: ". $filetag->{ID3v2}->get_frame("APIC") . "\n" );
+            #print_debug(" ID3v2 APIC: ". $filetag->{ID3v2}->get_frame("APIC") . "\n" );
         
             my $apicTagInfo = {};
             my $apicTagDescription = "";
             ( $apicTagInfo, $apicTagDescription ) = $filetag->{ID3v2}->get_frame("APIC");
             
-            print_debug(" ID3v2 APIC Tag Description: $apicTagDescription \n");
-            print_debug(" ID3v2 APIC Data: " . $apicTagInfo . "\n");
-            if ($apicTagDescription =~ /Attached Picture/igo)
+            if (defined $apicTagDescription && $apicTagDescription =~ /Attached Picture/igo)
             {
+                print_debug(" ID3v2 APIC Data: " . $apicTagInfo . "\n");
                 #         ( { "Description" => "Flood", 
                 #             "MIME Type" => "/image/jpeg", 
                 #             "Picture Type" => "Cover (front)",
                 #             "_Data" => "..data of jpeg picture (binary).."
                 #            },
                 #"Attached Picture");
-                print "File \"$artist - $title.mp3\" has album art with MIME Type \"" . $apicTagInfo->{"MIME type"} . "\"!\n";
+                #print "File \"$artist - $title.mp3\" has album art with MIME Type \"" . $apicTagInfo->{"MIME type"} . "\"!\n";
                 
                 
                 $albumArtData = $apicTagInfo->{"_Data"};
                 $hasAlbumArt = 1;
                 
-                foreach my $key ( keys %{$apicTagInfo} )
-                {
-                  print "APIC key: $key\n";
-                }
+                #foreach my $key ( keys %{$apicTagInfo} )
+                #{
+                #  print "APIC key: $key\n";
+                #}
             }
         }
         
@@ -373,30 +390,18 @@ foreach my $file (@basedir_content_mp3)
         # Album art
         if ($hasAlbumArt)
         {
-            print "IN HAS ALBUM ART!\n";
-            
-            my $dumpFile = 0;
             my $albumArtFileName = "/tmp/" . basename($file) . ".jpg";
             
             if (!exists $filesystem->{root}->{content}->{Artist}->{content}->{$artist}->{content}->{$album}->{content}->{"folder.jpg"})
             {
                 $filesystem->{root}->{content}->{Artist}->{content}->{$artist}->{content}->{$album}->{content}->{"folder.jpg"}->{type} = 'file';
                 $filesystem->{root}->{content}->{Artist}->{content}->{$artist}->{content}->{$album}->{content}->{"folder.jpg"}->{content} = $albumArtData;
-                
-                $dumpFile = 1;
             }
             
             if (!exists $filesystem->{root}->{content}->{Album}->{content}->{$album}->{content}->{"folder.jpg"})
             {
                 $filesystem->{root}->{content}->{Album}->{content}->{$album}->{content}->{"folder.jpg"}->{type} = 'file';
                 $filesystem->{root}->{content}->{Album}->{content}->{$album}->{content}->{"folder.jpg"}->{content} = $albumArtData;
-                
-                $dumpFile = 1;
-            }
-            
-            if ($dumpFile)
-            {
-                print "Writing album art to file $albumArtFileName \n";
             }
             
         }

@@ -31,6 +31,10 @@ REQUIREMENTS
 - Perl Module Ogg::Vorbis::Header
 - Fuse
 
+On ubuntu/debian derivatives, these requirements can be acquired with one apt-get install command:
+sudo apt-get install taglib-dev libfuse-perl libogg-vorbis-header-perl
+
+
 USAGE
 =====
 perl musicfs.pl <basedir> <moutpoint> [debug]
@@ -41,6 +45,6 @@ debug - enables debugoutput to STDOUT. Develop only. Produces very much output.
 
 KNOWN ISSUES/LIMITATIONS
 ========================
-- IDv2 is not supported yet for MP3-Files. Only IDv1 Tags.
+
 
 
